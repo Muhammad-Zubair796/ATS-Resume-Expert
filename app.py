@@ -84,3 +84,21 @@ elif submit3:
         st.write(response)
     else:
         st.write("Please upload the resume")
+# Footer
+st.markdown(
+    """
+    <style>
+    .footer {
+        position: fixed;
+        bottom: 10px;
+        right: 10px;
+        font-size: 14px;
+        color: grey;
+    }
+    </style>
+    <div class="footer">
+        👨‍💻 Developed by <b>Muhammad Zubair</b>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
