@@ -14,10 +14,17 @@ genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
 # Function to get response from Gemini model
 def get_gemini_response(input_text, pdf_content, prompt):
-    # FIXED: Changed to the correct model string to prevent the 404 error
-    model = genai.GenerativeModel("gemini-1.5-flash-latest")
-    response = model.generate_content([input_text, *pdf_content, prompt])
-    return response.text
+    try:
+        # First, try the standard 1.5 flash model
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        response = model.generate_content([input_text, *pdf_content, prompt])
+        return response.text
+    except Exception as e:
+        print(f"Primary model failed, using fallback. Error: {e}")
+        # FALLBACK: If 1.5 fails (404), use the older vision model which is guaranteed to work for PDFs/Images
+        model = genai.GenerativeModel("gemini-pro-vision")
+        response = model.generate_content([input_text, *pdf_content, prompt])
+        return response.text
 
 # Function to convert PDF to base64 images
 def input_pdf_setup(uploaded_file):
@@ -85,6 +92,7 @@ elif submit3:
         st.write(response)
     else:
         st.write("Please upload the resume")
+
 # Footer
 st.markdown(
     """
