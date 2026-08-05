@@ -10,14 +10,32 @@ import google.generativeai as genai
 # Configure Google Gemini API
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
-# Function to get response from Gemini model
+# Function to get response from Gemini model with Ultimate Fallback
 def get_gemini_response(input_text, pdf_image, prompt):
-    # Using the official, current multimodal model
-    model = genai.GenerativeModel("gemini-1.5-flash")
+    # A list of every possible valid Google model that supports images
+    models_to_try = [
+        "gemini-1.5-flash",
+        "gemini-1.5-flash-001",
+        "gemini-1.5-flash-002",
+        "gemini-1.5-pro",
+        "gemini-1.0-pro-vision-latest"
+    ]
     
-    # The new SDK allows us to pass the PIL Image directly! No base64 needed.
-    response = model.generate_content([input_text, pdf_image, prompt])
-    return response.text
+    last_error = None
+    
+    # Try each model one by one until Google accepts one
+    for model_name in models_to_try:
+        try:
+            model = genai.GenerativeModel(model_name)
+            response = model.generate_content([input_text, pdf_image, prompt])
+            return response.text
+        except Exception as e:
+            print(f"Model {model_name} failed. Trying next... Error: {e}")
+            last_error = e
+            continue # Go to the next model in the list
+            
+    # If ALL models fail, show the error on the screen so we know exactly why
+    return f"Error: Google API rejected all models. Last error: {last_error}"
 
 # Function to convert PDF to a PIL Image
 def input_pdf_setup(uploaded_file):
