@@ -1,8 +1,10 @@
 from dotenv import load_dotenv
 load_dotenv()
 
+import base64
 import streamlit as st
 import os
+import io
 from PIL import Image
 import pdf2image
 import google.generativeai as genai
@@ -10,41 +12,58 @@ import google.generativeai as genai
 # Configure Google Gemini API
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
-# Function to get response from Gemini model with Ultimate Fallback
-def get_gemini_response(input_text, pdf_image, prompt):
-    # A list of every possible valid Google model that supports images
-    models_to_try = [
-        "gemini-1.5-flash",
-        "gemini-1.5-flash-001",
-        "gemini-1.5-flash-002",
-        "gemini-1.5-pro",
-        "gemini-1.0-pro-vision-latest"
-    ]
-    
-    last_error = None
-    
-    # Try each model one by one until Google accepts one
-    for model_name in models_to_try:
-        try:
-            model = genai.GenerativeModel(model_name)
-            response = model.generate_content([input_text, pdf_image, prompt])
-            return response.text
-        except Exception as e:
-            print(f"Model {model_name} failed. Trying next... Error: {e}")
-            last_error = e
-            continue # Go to the next model in the list
-            
-    # If ALL models fail, show the error on the screen so we know exactly why
-    return f"Error: Google API rejected all models. Last error: {last_error}"
+# Function to get response from Gemini model dynamically
+def get_gemini_response(input_text, pdf_content, prompt):
+    try:
+        # 1. Ask Google exactly which models this API key is allowed to use
+        available_models = []
+        for m in genai.list_models():
+            if 'generateContent' in m.supported_generation_methods:
+                available_models.append(m.name)
+        
+        if not available_models:
+            return "Error: Your Google API key does not have access to any generation models."
 
-# Function to convert PDF to a PIL Image
+        # 2. Automatically pick the best available model from YOUR specific list
+        model_name = None
+        # We prefer 1.5 flash, then 1.5 pro, then anything with 'vision'
+        for preferred in ["gemini-1.5-flash", "gemini-1.5-pro", "vision"]:
+            for m in available_models:
+                if preferred in m:
+                    model_name = m
+                    break
+            if model_name:
+                break
+                
+        # If it didn't find our preferences, just force it to use the first available one
+        if not model_name:
+            model_name = available_models[0]
+
+        # 3. Generate the content using the dynamically found model
+        model = genai.GenerativeModel(model_name)
+        response = model.generate_content([input_text, pdf_content[0], prompt])
+        return response.text
+
+    except Exception as e:
+        return f"CRITICAL ERROR: Failed using model {model_name}. \n\nModels your API key actually has access to: {available_models}. \n\nExact Error: {e}"
+
+# Function to convert PDF to base64 images
 def input_pdf_setup(uploaded_file):
     if uploaded_file is not None:
-        # Convert PDF to images
         images = pdf2image.convert_from_bytes(uploaded_file.read())
-        # Return the first page as a standard PIL Image
         first_page = images[0]
-        return first_page
+
+        img_byte_arr = io.BytesIO()
+        first_page.save(img_byte_arr, format='JPEG')
+        img_byte_arr = img_byte_arr.getvalue()
+
+        pdf_parts = [
+            {
+                "mime_type": "image/jpeg",
+                "data": base64.b64encode(img_byte_arr).decode()
+            }
+        ]
+        return pdf_parts
     else:
         raise FileNotFoundError("No file uploaded")
 
@@ -80,8 +99,8 @@ the job description. First, the output should come as percentage, then keywords 
 if submit1:
     if uploaded_file is not None:
         with st.spinner("Analyzing resume... Please wait."):
-            pdf_image = input_pdf_setup(uploaded_file)
-            response = get_gemini_response(input_text, pdf_image, input_prompt1)
+            pdf_content = input_pdf_setup(uploaded_file)
+            response = get_gemini_response(input_text, pdf_content, input_prompt1)
             st.subheader("The Response is")
             st.write(response)
     else:
@@ -90,8 +109,8 @@ if submit1:
 elif submit3:
     if uploaded_file is not None:
         with st.spinner("Calculating match percentage... Please wait."):
-            pdf_image = input_pdf_setup(uploaded_file)
-            response = get_gemini_response(input_text, pdf_image, input_prompt3)
+            pdf_content = input_pdf_setup(uploaded_file)
+            response = get_gemini_response(input_text, pdf_content, input_prompt3)
             st.subheader("The Response is")
             st.write(response)
     else:
