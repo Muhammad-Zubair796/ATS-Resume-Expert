@@ -14,7 +14,8 @@ genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
 # Function to get response from Gemini model
 def get_gemini_response(input_text, pdf_content, prompt):
-    model = genai.GenerativeModel("gemini-1.5-flash")
+    # FIXED: Changed to the correct model string to prevent the 404 error
+    model = genai.GenerativeModel("gemini-1.5-flash-latest")
     response = model.generate_content([input_text, *pdf_content, prompt])
     return response.text
 

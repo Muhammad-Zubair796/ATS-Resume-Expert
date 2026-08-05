@@ -1,4 +1,12 @@
+<<<<<<< HEAD
 google-generativeai
 python-dotenv
 pdf2image
+=======
+streamlit
+google-generativeai
+pdf2image
+python-dotenv
+Pillow
+>>>>>>> 25738bd6899fa701005802e9043400b7bd986f0c
 starlette==0.39.2
