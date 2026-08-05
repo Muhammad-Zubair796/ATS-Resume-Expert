@@ -14,7 +14,6 @@ genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
 # Function to get response from Gemini model dynamically
 def get_gemini_response(input_text, pdf_content, prompt):
-    # FIXED: Define these variables BEFORE the try block so they always exist
     model_name = "Not Selected Yet (Failed early)"
     available_models = []
     
@@ -29,7 +28,9 @@ def get_gemini_response(input_text, pdf_content, prompt):
 
         # 2. Automatically pick the best available model from YOUR specific list
         model_name = None
-        for preferred in ["gemini-1.5-flash", "gemini-1.5-pro", "vision"]:
+        
+        # FIXED: Updated to use Google's newest models based on your API key's access list
+        for preferred in ["gemini-flash-latest", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-2.0-flash"]:
             for m in available_models:
                 if preferred in m:
                     model_name = m
@@ -38,7 +39,7 @@ def get_gemini_response(input_text, pdf_content, prompt):
                 break
                 
         if not model_name:
-            model_name = available_models[0]
+            model_name = available_models[-1] # Fallback to the last available model
 
         # 3. Generate the content using the dynamically found model
         model = genai.GenerativeModel(model_name)
