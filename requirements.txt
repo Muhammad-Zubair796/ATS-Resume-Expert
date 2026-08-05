@@ -1,4 +1,6 @@
+streamlit
 google-generativeai
-python-dotenv
 pdf2image
+python-dotenv
+Pillow
 starlette==0.39.2
