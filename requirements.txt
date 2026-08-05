@@ -1,4 +1,4 @@
 google-generativeai
 python-dotenv
 pdf2image
-streamlit
+starlette==0.39.2
