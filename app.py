@@ -14,9 +14,12 @@ genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
 # Function to get response from Gemini model dynamically
 def get_gemini_response(input_text, pdf_content, prompt):
+    # FIXED: Define these variables BEFORE the try block so they always exist
+    model_name = "Not Selected Yet (Failed early)"
+    available_models = []
+    
     try:
         # 1. Ask Google exactly which models this API key is allowed to use
-        available_models = []
         for m in genai.list_models():
             if 'generateContent' in m.supported_generation_methods:
                 available_models.append(m.name)
@@ -26,7 +29,6 @@ def get_gemini_response(input_text, pdf_content, prompt):
 
         # 2. Automatically pick the best available model from YOUR specific list
         model_name = None
-        # We prefer 1.5 flash, then 1.5 pro, then anything with 'vision'
         for preferred in ["gemini-1.5-flash", "gemini-1.5-pro", "vision"]:
             for m in available_models:
                 if preferred in m:
@@ -35,7 +37,6 @@ def get_gemini_response(input_text, pdf_content, prompt):
             if model_name:
                 break
                 
-        # If it didn't find our preferences, just force it to use the first available one
         if not model_name:
             model_name = available_models[0]
 
@@ -45,7 +46,7 @@ def get_gemini_response(input_text, pdf_content, prompt):
         return response.text
 
     except Exception as e:
-        return f"CRITICAL ERROR: Failed using model {model_name}. \n\nModels your API key actually has access to: {available_models}. \n\nExact Error: {e}"
+        return f"CRITICAL ERROR: Failed using model {model_name}. \n\nModels found: {available_models}. \n\nExact Error: {e}"
 
 # Function to convert PDF to base64 images
 def input_pdf_setup(uploaded_file):
